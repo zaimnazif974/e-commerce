@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.4
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "15001:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.4
+    depends_on:
+      - zookeeper
+    ports:
+      - "15002:9092"
+      - "15003:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ecommerce_user
+      POSTGRES_PASSWORD: ecommerce_password
+      POSTGRES_DB: ecommerce_db
+    ports:
+      - "15004:5432"
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce_user -d ecommerce_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  order-service:
+    build:
+      context: ./order-service
+    ports:
+      - "15005:3001"
+    environment:
+      - DATABASE_URL=postgres://ecommerce_user:ecommerce_password@postgres:5432/order_db
+      - KAFKA_BROKER=kafka:9092
+      - PORT=3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  inventory-service:
+    build:
+      context: ./inventory-service
+    ports:
+      - "15006:3002"
+    environment:
+      - DATABASE_URL=postgres://ecommerce_user:ecommerce_password@postgres:5432/inventory_db
+      - KAFKA_BROKER=kafka:9092
+      - PORT=3002
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  payment-service:
+    build:
+      context: ./payment-service
+    ports:
+      - "15007:3003"
+    environment:
+      - DATABASE_URL=postgres://ecommerce_user:ecommerce_password@postgres:5432/payment_db
+      - KAFKA_BROKER=kafka:9092
+      - PORT=3003
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  notification-service:
+    build:
+      context: ./notification-service
+    ports:
+      - "15008:3004"
+    environment:
+      - DATABASE_URL=postgres://ecommerce_user:ecommerce_password@postgres:5432/notification_db
+      - KAFKA_BROKER=kafka:9092
+      - PORT=3004
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "15009:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - order-service
+      - inventory-service
+      - payment-service
+      - notification-service
