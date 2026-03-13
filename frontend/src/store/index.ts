@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
 
+import { useAuthStore } from './auth'
+
 export const useAppStore = defineStore('app', {
   state: () => ({
-    userId: 1, // Simulated logged in user
     products: [] as any[],
     orders: [] as any[],
     notifications: [] as any[],
@@ -24,9 +25,10 @@ export const useAppStore = defineStore('app', {
     },
     async createOrder(productId: number, quantity: number, totalAmount: number) {
       this.loading = true
+      const auth = useAuthStore()
       try {
         const res = await axios.post('http://localhost:15005/orders', {
-          userId: this.userId,
+          userId: auth.currentUser?.id,
           productId,
           quantity,
           totalAmount
@@ -41,8 +43,9 @@ export const useAppStore = defineStore('app', {
     },
     async fetchOrders() {
        this.loading = true
+       const auth = useAuthStore()
       try {
-        const res = await axios.get(`http://localhost:15005/orders/${this.userId}`)
+        const res = await axios.get(`http://localhost:15005/orders/${auth.currentUser?.id}`)
         this.orders = res.data
       } catch (e: any) {
         this.error = e.message
@@ -52,12 +55,13 @@ export const useAppStore = defineStore('app', {
     },
     async processPayment(orderId: number, amount: number, paymentMethod: string, productId: number, quantity: number) {
       this.loading = true
+      const auth = useAuthStore()
       try {
         const res = await axios.post('http://localhost:15007/payments', {
           orderId,
           amount,
           paymentMethod,
-          userId: this.userId,
+          userId: auth.currentUser?.id,
           productId,
           quantity
         })
@@ -71,11 +75,24 @@ export const useAppStore = defineStore('app', {
     },
     async fetchNotifications() {
        this.loading = true
+       const auth = useAuthStore()
       try {
-        const res = await axios.get(`http://localhost:15008/notifications/${this.userId}`)
+        const res = await axios.get(`http://localhost:15008/notifications/${auth.currentUser?.id}`)
         this.notifications = res.data
       } catch (e: any) {
         this.error = e.message
+      } finally {
+        this.loading = false
+      }
+    },
+    async cancelOrder(orderId: number) {
+      this.loading = true
+      try {
+        const res = await axios.patch(`http://localhost:15005/orders/${orderId}/cancel`)
+        return res.data
+      } catch (e: any) {
+        this.error = e.message
+        throw e
       } finally {
         this.loading = false
       }

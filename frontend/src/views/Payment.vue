@@ -2,6 +2,10 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '../store'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 
 const store = useAppStore()
 const router = useRouter()
@@ -30,39 +34,45 @@ const pay = async () => {
 </script>
 
 <template>
-  <div class="payment-container">
-    <h2>Checkout Details</h2>
-    <div class="summary">
-      <p><strong>Order ID:</strong> {{ orderId }}</p>
-      <p><strong>Total Amount:</strong> ${{ amount }}</p>
-    </div>
-    
-    <div class="payment-method">
-      <label>Select Payment Method:</label>
-      <select v-model="paymentMethod">
-        <option>Credit Card</option>
-        <option>PayPal</option>
-        <option>Bank Transfer</option>
-      </select>
-    </div>
-    
-    <button @click="pay" :disabled="store.loading" class="pay-btn">
-      {{ store.loading ? 'Processing...' : `Pay $${amount}` }}
-    </button>
-    
-    <p v-if="paymentStatus" :class="{'success': paymentStatus.includes('Successful'), 'error': paymentStatus.includes('Failed')}">
-      {{ paymentStatus }}
-    </p>
+  <div class="flex items-center justify-center min-h-[60vh]">
+    <Card class="w-[450px]">
+      <CardHeader>
+        <CardTitle>Checkout</CardTitle>
+        <CardDescription>Complete your payment for Order #{{ orderId }}</CardDescription>
+      </CardHeader>
+      
+      <CardContent class="grid gap-6">
+        <div class="bg-slate-50 p-4 rounded-lg flex items-center justify-between border">
+          <span class="font-medium text-slate-500">Total Amount</span>
+          <span class="text-2xl font-bold text-slate-900">${{ amount }}</span>
+        </div>
+        
+        <div class="grid gap-3">
+          <Label>Payment Method</Label>
+          <Select v-model="paymentMethod">
+            <SelectTrigger>
+              <SelectValue placeholder="Select payment method" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Credit Card">Credit Card</SelectItem>
+              <SelectItem value="PayPal">PayPal</SelectItem>
+              <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div v-if="paymentStatus" 
+             :class="['text-sm p-3 rounded-md text-center font-medium', 
+                      paymentStatus.includes('Successful') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200']">
+          {{ paymentStatus }}
+        </div>
+      </CardContent>
+      
+      <CardFooter>
+        <Button @click="pay" :disabled="store.loading" class="w-full text-lg h-12">
+          {{ store.loading ? 'Processing...' : `Pay $${amount}` }}
+        </Button>
+      </CardFooter>
+    </Card>
   </div>
 </template>
-
-<style scoped>
-.payment-container { max-width: 400px; margin: 0 auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
-.summary { background: #f9f9f9; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
-.payment-method { margin-bottom: 1.5rem; }
-select { width: 100%; padding: 8px; margin-top: 5px; }
-.pay-btn { width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; }
-.pay-btn:disabled { background: #6c757d; cursor: not-allowed; }
-.success { color: green; margin-top: 1rem; font-weight: bold; text-align: center; }
-.error { color: red; margin-top: 1rem; font-weight: bold; text-align: center; }
-</style>

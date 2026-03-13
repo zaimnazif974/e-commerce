@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useAppStore } from '../store'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Bell } from 'lucide-vue-next'
 
 const store = useAppStore()
 
@@ -10,30 +13,31 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <h1>Notifications</h1>
-    <button @click="store.fetchNotifications()" class="refresh">Refresh Notifications</button>
-    
-    <div v-if="store.loading">Loading...</div>
-    
-    <div v-if="store.notifications.length > 0" class="notification-list">
-      <div v-for="n in store.notifications" :key="n.id" class="notification-item">
-        <i class="icon">🔔</i>
-        <div class="content">
-          <p class="message">{{ n.message }}</p>
-          <span class="time">{{ new Date(n.createdAt).toLocaleString() }}</span>
-        </div>
+  <div class="space-y-6 max-w-3xl mx-auto">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Notifications</h1>
+        <p class="text-slate-500">Stay updated on your orders.</p>
       </div>
+      <Button variant="outline" @click="store.fetchNotifications()" :disabled="store.loading">
+        {{ store.loading ? 'Refreshing...' : 'Refresh' }}
+      </Button>
     </div>
-    <p v-else>No new notifications.</p>
+    
+    <div v-if="store.notifications.length > 0" class="flex flex-col gap-4">
+      <Card v-for="n in store.notifications" :key="n.id" class="flex items-start gap-4 p-4 border-l-4 border-l-blue-500 overflow-hidden">
+        <div class="mt-1 bg-blue-100 p-2 rounded-full text-blue-600">
+          <Bell class="w-5 h-5" />
+        </div>
+        <div class="flex-1">
+          <p class="text-slate-900 font-medium leading-tight mb-1">{{ n.message }}</p>
+          <span class="text-xs text-slate-500">{{ new Date(n.createdAt).toLocaleString() }}</span>
+        </div>
+      </Card>
+    </div>
+    <div v-else-if="!store.loading" class="p-12 text-center text-slate-500 border rounded-lg bg-white border-dashed">
+      <Bell class="w-8 h-8 mx-auto mb-3 text-slate-400" />
+      <p>No new notifications.</p>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.notification-list { display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; }
-.notification-item { display: flex; align-items: center; padding: 15px; border-left: 4px solid #007bff; background: #f8f9fa; border-radius: 4px; }
-.icon { font-size: 1.5rem; margin-right: 15px; }
-.message { margin: 0; font-weight: 500; }
-.time { font-size: 0.8em; color: gray; }
-.refresh { margin-bottom: 1rem; padding: 6px 12px;}
-</style>

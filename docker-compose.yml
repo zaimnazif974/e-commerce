@@ -100,6 +100,21 @@ services:
       kafka:
         condition: service_started
 
+  dashboard-service:
+    build:
+      context: ./dashboard-service
+    ports:
+      - "15010:3005"
+    environment:
+      - DATABASE_URL=postgres://ecommerce_user:ecommerce_password@postgres:5432/dashboard_db
+      - KAFKA_BROKER=kafka:9092
+      - PORT=3005
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
   frontend:
     build:
       context: ./frontend
@@ -112,3 +127,4 @@ services:
       - inventory-service
       - payment-service
       - notification-service
+      - dashboard-service

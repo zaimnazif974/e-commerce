@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://ecommerce_user:ecommerce_password@localhost:5432/order_db',
+  connectionString: process.env.DATABASE_URL || 'postgres://ecommerce_user:ecommerce_password@localhost:5432/ecommerce_db',
 });
 
 export const db = drizzle(pool, { schema });

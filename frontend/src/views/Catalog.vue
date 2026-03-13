@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAppStore } from '../store'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 const store = useAppStore()
-const router = useRouter()
 
 onMounted(() => {
   store.fetchProducts()
@@ -12,8 +12,8 @@ onMounted(() => {
 
 const buyNow = async (product: any) => {
   try {
-    const order = await store.createOrder(product.id, 1, product.price)
-    router.push(`/payment/${order.id}?amount=${product.price}&productId=${product.id}&quantity=1`)
+    await store.createOrder(product.id, 1, product.price)
+    alert(`Order for ${product.name} created successfully! Please check My Orders to pay.`)
   } catch (e) {
     alert("Failed to create order")
   }
@@ -21,41 +21,31 @@ const buyNow = async (product: any) => {
 </script>
 
 <template>
-  <div>
-    <h1>Product Catalog</h1>
-    <div v-if="store.loading">Loading...</div>
-    <div v-if="store.error" class="error">{{ store.error }}</div>
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Product Catalog</h1>
+      <p class="text-slate-500">Browse and purchase our latest items.</p>
+    </div>
     
-    <div class="product-grid">
-      <div v-for="p in store.products" :key="p.id" class="card">
-        <h3>{{ p.name }}</h3>
-        <p>{{ p.description }}</p>
-        <p class="price">${{ p.price }}</p>
-        <p class="stock">Stock: {{ p.stock }}</p>
-        <button @click="buyNow(p)" :disabled="p.stock <= 0">
-          {{ p.stock > 0 ? 'Buy Now' : 'Out of Stock' }}
-        </button>
-      </div>
+    <div v-if="store.loading" class="text-slate-500">Loading products...</div>
+    <div v-else-if="store.error" class="text-destructive font-semibold">{{ store.error }}</div>
+    
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <Card v-for="p in store.products" :key="p.id" class="flex flex-col">
+        <CardHeader>
+          <CardTitle>{{ p.name }}</CardTitle>
+          <CardDescription>{{ p.description }}</CardDescription>
+        </CardHeader>
+        <CardContent class="flex-1">
+          <div class="text-2xl font-bold text-green-600">${{ p.price }}</div>
+          <div class="text-sm text-slate-500 mt-2">Stock: {{ p.stock }} units</div>
+        </CardContent>
+        <CardFooter>
+          <Button @click="buyNow(p)" :disabled="p.stock <= 0" class="w-full">
+            {{ p.stock > 0 ? 'Buy Now' : 'Out of Stock' }}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   </div>
 </template>
-
-<style scoped>
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
-}
-.card {
-  border: 1px solid #ccc;
-  padding: 1rem;
-  border-radius: 8px;
-  background: white;
-}
-.price { font-weight: bold; color: green; }
-.stock { color: gray; font-size: 0.9em; }
-button {
-  background: #007bff; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;
-}
-button:disabled { background: #ccc; cursor: not-allowed; }
-</style>

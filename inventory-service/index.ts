@@ -28,6 +28,25 @@ app.post('/products', async (req, res) => {
   }
 });
 
+app.post('/api/inventory/:id/decrease', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const { quantity } = req.body;
+    
+    // Check current stock
+    const product = await db.select().from(products).where(eq(products.id, productId));
+    if (!product.length || product[0].stock < quantity) {
+      return res.status(400).json({ error: 'Not enough stock or product not found' });
+    }
+    
+    // Decrease stock
+    const updatedProduct = await db.execute(sql`UPDATE products SET stock = stock - ${quantity} WHERE id = ${productId} RETURNING *`);
+    res.status(200).json({ success: true, product: updatedProduct });
+  } catch (error) {
+    res.status(500).json({ error: (error as any).message });
+  }
+});
+
 const start = async () => {
   try {
     console.log('Pushing schema to DB...');
@@ -53,15 +72,26 @@ const start = async () => {
   }
 
   await connectKafka();
-  await consumer.subscribe({ topic: 'payment.success', fromBeginning: false });
+  await consumer.subscribe({ topic: 'payment-events', fromBeginning: false });
+  await consumer.subscribe({ topic: 'order-events', fromBeginning: false });
   await consumer.run({
-    eachMessage: async ({ message }) => {
+    eachMessage: async ({ topic, message }) => {
       if (!message.value) return;
-      const event = JSON.parse(message.value.toString());
-      console.log('Received payment.success event', event);
-      
-      // Reduce stock
-      await db.execute(sql`UPDATE products SET stock = stock - ${event.quantity} WHERE id = ${event.productId}`);
+      const payload = JSON.parse(message.value.toString());
+      if (topic === 'payment-events' && payload.type === 'payment.success') {
+        const event = payload.data;
+        console.log('Received payment.success event', event);
+        // Removed asynchronous stock reduction
+      } else if (topic === 'order-events' && payload.type === 'order.cancelled') {
+        const event = payload.data;
+        console.log('Received order.cancelled event, restoring stock', event);
+        try {
+          await db.execute(sql`UPDATE products SET stock = stock + ${event.quantity} WHERE id = ${event.productId}`);
+          console.log(`Restored ${event.quantity} stock for product ${event.productId}`);
+        } catch (err) {
+          console.error('Failed to restore stock', err);
+        }
+      }
     }
   });
 

@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { db } from './db';
 import { payments } from './db/schema';
-import { connectKafka, producer } from './kafka';
+import { connectKafka, producer, consumer } from './kafka';
+import { eq } from 'drizzle-orm';
 import { execSync } from 'child_process';
 
 const app = express();
@@ -19,23 +20,26 @@ app.post('/payments', async (req, res) => {
       return res.status(400).json({ error: 'Payment failed' });
     }
 
-    const newPayment = await db.insert(payments).values({
-      orderId,
-      amount,
-      paymentMethod,
-      status: 'SUCCESS'
-    }).returning();
+    // Update existing payment instead of insert
+    const updatedPayment = await db.update(payments)
+      .set({ 
+        amount,
+        paymentMethod,
+        status: 'SUCCESS' 
+      })
+      .where(eq(payments.orderId, orderId))
+      .returning();
 
-    const payment = newPayment?.[0];
+    const payment = updatedPayment?.[0];
     if (!payment) {
-      throw new Error('Failed to save payment record');
+      throw new Error('Failed to find or update payment record');
     }
 
     // Publish event
     await producer.send({
-      topic: 'payment.success',
+      topic: 'payment-events',
       messages: [
-        { value: JSON.stringify({ orderId, amount, userId, productId, quantity, paymentId: payment.id }) }
+        { value: JSON.stringify({ type: 'payment.success', data: { orderId, amount, userId, productId, quantity, paymentId: payment.id } }) }
       ]
     });
 
@@ -55,6 +59,30 @@ const start = async () => {
   }
 
   await connectKafka();
+  
+  await consumer.subscribe({ topic: 'order-events', fromBeginning: false });
+  await consumer.run({
+    eachMessage: async ({ message }) => {
+      if (!message.value) return;
+      const payload = JSON.parse(message.value.toString());
+      
+      if (payload.type === 'order.created') {
+        const event = payload.data;
+        console.log('Received order.created event', event);
+        
+        try {
+          await db.insert(payments).values({
+            orderId: event.orderId,
+            amount: event.amount,
+            status: 'PENDING'
+          });
+          console.log(`Created PENDING payment for order ${event.orderId}`);
+        } catch (err) {
+          console.error('Failed to create pending payment', err);
+        }
+      }
+    }
+  });
 
   const port = process.env.PORT || 3003;
   app.listen(port, () => console.log(`Payment service running on port ${port}`));

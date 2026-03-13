@@ -29,19 +29,39 @@ const start = async () => {
   }
 
   await connectKafka();
-  await consumer.subscribe({ topic: 'payment.success', fromBeginning: false });
+  await consumer.subscribe({ topic: 'payment-events', fromBeginning: false });
+  await consumer.subscribe({ topic: 'order-events', fromBeginning: false });
+  
   await consumer.run({
-    eachMessage: async ({ message }) => {
+    eachMessage: async ({ topic, message }) => {
       if (!message.value) return;
-      const event = JSON.parse(message.value.toString());
-      console.log('Received payment.success event', event);
+      const payload = JSON.parse(message.value.toString());
       
-      // Create notification
-      await db.insert(notifications).values({
-        userId: event.userId,
-        message: `Your payment of $${event.amount} for order #${event.orderId} was successful!`,
-        type: 'PAYMENT_SUCCESS',
-      });
+      if (topic === 'payment-events' && payload.type === 'payment.success') {
+        const event = payload.data;
+        console.log('Received payment.success event', event);
+        await db.insert(notifications).values({
+          userId: event.userId,
+          message: `Your payment of $${event.amount} for order #${event.orderId} was successful!`,
+          type: 'PAYMENT_SUCCESS',
+        });
+      } else if (topic === 'order-events' && payload.type === 'order.created') {
+        const event = payload.data;
+        console.log('Received order.created event', event);
+        await db.insert(notifications).values({
+          userId: event.userId,
+          message: `Order #${event.orderId} created for $${event.amount}. Please complete your payment.`,
+          type: 'WAITING_PAYMENT',
+        });
+      } else if (topic === 'order-events' && payload.type === 'order.cancelled') {
+        const event = payload.data;
+        console.log('Received order.cancelled event', event);
+        await db.insert(notifications).values({
+          userId: event.userId,
+          message: `Order #${event.orderId} was cancelled successfully.`,
+          type: 'ORDER_CANCELLED',
+        });
+      }
     }
   });
 

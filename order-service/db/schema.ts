@@ -6,6 +6,6 @@ export const orders = pgTable('orders', {
   productId: integer('product_id').notNull(),
   quantity: integer('quantity').notNull(),
   totalAmount: numeric('total_amount').notNull(),
-  status: varchar('status', { length: 50 }).notNull().default('PENDING'), // PENDING, PAID, CANCELLED, FAILED_PAYMENT
+  status: varchar('status', { length: 50 }).notNull().default('WAITING_FOR_PAYMENT'), // WAITING_FOR_PAYMENT, PENDING, SUCCESS, FAILED, COMPLETE, CANCELLED, CANCELLED, FAILED_PAYMENT
   createdAt: timestamp('created_at').defaultNow(),
 });
