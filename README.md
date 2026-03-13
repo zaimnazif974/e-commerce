@@ -1,3 +1,12 @@
+# Tutorial 2 
+**Nama: Zaim Aydin Nazif**
+
+**NPM: 2206082524**
+
+**link repo: https://github.com/zaimnazif974/e-commerce**
+# Disclaimer Penggunaan Gen AI
+Dalam mengerjakan tutorial ini saya menggunakan chatGPT dan Antigravity sebagai alat bantu untuk bug fixing dan memahami beberapa konsep seperti konfigurasi Kafka dan zookeeper. Saya tidak menggunakan Gen AI untuk merancang arsitektur atau membuat ide dari proyek ini, Gen AI hanya digunakan sebagai tools untuk memperlancar dan mempercepat pengerjaan.
+
 # E-Commerce Microservices Architecture
 
 Sistem e-commerce ini dibangun menggunakan arsitektur mikrolayanan (microservices) dengan beberapa layanan backend independen yang berkomunikasi menggunakan Apache Kafka sebagai *message broker*, dan PostgreSQL sebagai centralized database utama. Sistem ini terdiri dari berbagai komponen yang diorkestrasi menggunakan Docker Compose.
